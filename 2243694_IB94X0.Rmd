@@ -1,0 +1,185 @@
+---
+title: "Business statics mid term assignment"
+author: "22433694"
+output: html_document
+---
+This is to certify that the work I am submitting is my own. All external references and sources are clearly acknowledged and identified within the contents. I am aware of the University of Warwick regulation concerning plagiarism and collusion. 
+
+No substantial part(s) of the work  submitted  here has also been submitted by  me  in other assessments for accredited courses of study, and I acknowledge that if this has been done an appropriate reduction in the mark I might otherwise have received will be made . 
+
+---
+
+# Section 1
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(emmeans)
+library(gridExtra)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+* This report fulfills the requests of Analyzing information on children living in low-income households.
+* The information is arranged in London based on geographic areas.
+* The vast regions that make up London's boroughs are normally overseen by separate wards.
+* There are wards, which are additional subdivisions, inside every borough.
+* The 8-year data set offers a historical perspective.
+* It keeps track of how many children reside in low Income in each London ward.
+
+---
+
+## Data Dictionary
+The  variables in the dataset are described in the table below
+
+Variable | Description
+------------- | -------------
+Ward.code|  Code of different wards exists in London
+Wards..2018 |  Name of different wards in London
+year |  Different years along which the data has been taken
+Borough|  Name of Different Borough in london
+children |  Average number of children 
+
+---
+
+## Read Data
+```{r}
+dataset=read.csv("children_low_income_data.csv")
+#Year has been taken as integer here so we have to convert it into factor
+dataset$year=as.factor(dataset$year)
+```
+
+## Calculating  Mean , Standard deviation , Minimum and Maximum number of Children foror each Borough 
+```{r}
+dataset_processed1 <- dataset %>%
+  group_by(Borough) %>%
+  summarise(avg_children_in_Borough=mean(children,na.rm=TRUE),sd_children_in_Borough=sd(children,na.rm=TRUE),min_children_in_Borough=min(children,na.rm=TRUE),max_children_in_Borugh=max(children,na.rm=TRUE))
+  
+```
+
+## Excluding Usual Borough 
+##### Some of the Boroughs have Null values in them so removing them for further analysis
+```{r}
+dataset_processed <- dataset %>%
+  filter(!Borough%in%c("City of London", "Kensington and Chelsea", "Kingston upon Thames", "Richmond upon Thames", "Westminster")) 
+```
+
+```{r , echo=FALSE, message=FALSE, warning=FALSE,results='hide'}
+quantile(dataset_processed$children, probs = seq(0,1,0.05))
+quartiles <- quantile(dataset_processed$children, probs = c(0.025, 0.975))
+lower_threshold <- quartiles[1]
+upper_threshold <- quartiles[2] 
+
+dataset_processed_no_outliers <- dataset_processed %>%
+  filter(children >= lower_threshold & children <= upper_threshold)
+mean(dataset_processed_no_outliers$children)
+mean(dataset_processed$children) #the mean after removing the outliers does not change that much
+sum(duplicated(dataset_processed)) # for checking the duplicated data in the dataset
+```
+
+## Calculating Mean and Standard deviation Then Plotting it 
+```{r}
+dataset_With_Mean_Average <- dataset_processed%>%
+  group_by(year) %>%
+  summarise(children_average=mean(children),children_sd=sd(children))
+
+```
+
+## Plotting the graph for Year Vs Average number of children in low income household
+```{r,message=FALSE}
+ggplot(dataset_processed,aes(factor(year),children,fill=year))+geom_violin(alpha=0.2) + geom_pointrange(data = dataset_With_Mean_Average, aes(x = factor(year), y = children_average, ymin = children_average - children_sd, ymax =children_average + children_sd), color = "blue", size = 0.5,show.legend=FALSE)+labs(x="Year",y="Number of children in low income household") + ggtitle("Year Vs Average number of children in low income household") 
+```
+
+## Performing t-test for year 2014 and 2021
+```{r}
+dataset_test<- dataset_processed %>%
+  filter((year==2014 | year==2021) & !is.na(children)  )
+t.test(dataset_test$children[dataset_test$year==2021],dataset_test$children[dataset_test$year==2014])  
+```
+
+
+
+## Estimating the results and calculating confidence intervals 
+```{r}
+(dataset_children_by_year <- lm(dataset_test$children~dataset_test$year))
+dataset_children_by_year_emm <- emmeans(dataset_children_by_year,~factor(year))
+(dataset_children_by_year_contrast<-confint(pairs(dataset_children_by_year_emm)))
+#the mean for children for low income household for 2014 is 528 , and the confidence intervals 95 percent CI[502,554]. and for 2021 the mean is 604 and the confidence intervals 95 percent CI[578,630] 
+#according to t test the mean difference for number of children is 76 and 95 percent confidence interval [-112,-38.7] lesser in comparison to the year 2014 than 2021 and is significantly different from zero with t(1095)=-4.02 with p value less than 0.05
+```
+
+
+## Plotting Confidence Intervals 
+```{r}
+grid.arrange(
+    ggplot(summary(dataset_children_by_year_emm), aes(x=factor(year), y=emmean, ymin=lower.CL, ymax=upper.CL)) + 
+        geom_point() + geom_linerange() + 
+        labs(y="Number Of Children", x="Years", subtitle="Error bars are 95% CIs", title="Number Of Children by Year") + ylim(500,650), 
+    ggplot(dataset_children_by_year_contrast, aes(x=contrast, y=estimate, ymin=lower.CL, ymax=upper.CL)) + 
+        geom_point() + geom_linerange() + 
+        labs(y="Difference In Number Of Children", x="Contrast", subtitle="95% CIs", title="Difference Between Number Of Children")  +
+        geom_hline(yintercept=0, lty=2),
+    ncol=2
+)
+```
+
+
+"The mean for number of children in 2014 is 528 and 95% CI [502,554]. The mean for number of children in 2021 is 604 and 95% CI [578,630]. The difference is -75.5 and 95% CI [-112,-38.7] "
+
+
+# Section 2
+
+## Report
+
+This report shows the analysis asked by the company that we have **5120** number of observations which have total of 5 variables which are **Ward.code** , **Wards..2018**, **year** , **Borough** and **children** . After that the unusual boroughs are removed which are **City of London**, **Kensington and Chelsea** , **Kingston upon Thames** ,  **Richmond upon Thames** and  **Westminster** . Upon analysis these borough are the one which have null values and have unusual number of children which are removed . 
+Then mean and standard deviation of the data is calculated which is as follows 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dataset_With_Mean_Average %>%
+  kbl(caption = " **Children average and Standard deviation** ") %>%
+  kable_styling()
+```
+
+
+We can see that the mean was lowest in 2014 and then it substantially increased in the year 2019. Afterward, the plotting of data was done on a violin plot in which the plotting was done against the number of children in low-income household vs year along with the mean and standard deviation which is as follows
+
+
+Performed an analysis by comparing the dataset’s overall mean to the mean of 95% of the distribution. I subsequently found that there was not a significant shift in the mean. Consequently, it may be said that the data contained no outliers. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+dataset_processed1 %>%
+  kbl(caption = " **Children average and Standard deviation for each Borough** ") %>%
+  kable_styling("striped", full_width = F) %>% 
+  scroll_box(width = "600px", height = "400px")
+```
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(dataset_processed,aes(factor(year),children,fill=year))+geom_violin(alpha=0.2) + geom_pointrange(data = dataset_With_Mean_Average, aes(x = factor(year), y = children_average, ymin = children_average - children_sd, ymax =children_average + children_sd), color = "blue", size = 0.5,show.legend=FALSE)+labs(x="Year",y="Number of Children In Low Income Household") + ggtitle("Year Vs Average Number Of Children In Low Income Household") 
+```
+
+The blue dot represents the mean and the line represents the maximum and minimum standard deviation
+
+
+The graph clearly shows the bulges in the middle showing a large number of data points in the middle region for Each Year indicating a huge number of children . 
+
+
+
+After that two sample t-test was performed which gave results as the mean of children for low income household in 2014 was **528** , and the confidence intervals 95 percent **CI[502,554]**. and for 2021 the mean was **604** and the confidence intervals were 95 percent **CI[578,630]** . The t-statistic is **-4.0215**, and the associated p-value is very less than 0.05 . This small p-value suggests strong evidence that a significant difference exist in the dataset.   
+
+
+Based on the statistical analysis, there is an estimated difference of **-75.5** in the mean number of children in low-income households between the years 2014 and 2021. Given that the result was obtained with a 95% confidence level, we can be certain that the true difference is between **-112** and **-38.7**.  The linear regression analysis provides strong evidence of a statistically significant relationship between the year and the number of children in low-income households. The negative coefficient for the ‘mean children in low income’ variable suggests an increasing trend in the number of children in low-income households over time
+
+
+### Conclusion 
+
+The mean number of children in low-income households appears to have changed considerably between 2014 and 2021, according to the Welch Two Sample t-test results. The sample estimates suggest that the mean number of children in low-income households increased between 2014 and 2021 which should be analysed further for in-depth analysis. And this trend is overall increasing from the year 2014 to 2021 
+
+
+###### Reference
+* www.stackoverflow.com
+* www.datacamp.com 
+* Lecture Resources
+* R for Data Science Garrett Grolemund (Author), Hadley Wickham (Author) 
+* Sample Assignment
