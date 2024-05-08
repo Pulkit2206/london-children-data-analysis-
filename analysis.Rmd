@@ -1,11 +1,6 @@
 ---
-title: "Business statics mid term assignment"
-author: "22433694"
 output: html_document
----
-This is to certify that the work I am submitting is my own. All external references and sources are clearly acknowledged and identified within the contents. I am aware of the University of Warwick regulation concerning plagiarism and collusion. 
-
-No substantial part(s) of the work  submitted  here has also been submitted by  me  in other assessments for accredited courses of study, and I acknowledge that if this has been done an appropriate reduction in the mark I might otherwise have received will be made . 
+--- 
 
 ---
 
