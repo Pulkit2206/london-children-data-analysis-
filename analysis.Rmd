@@ -177,4 +177,3 @@ The mean number of children in low-income households appears to have changed con
 * www.datacamp.com 
 * Lecture Resources
 * R for Data Science Garrett Grolemund (Author), Hadley Wickham (Author) 
-* Sample Assignment
